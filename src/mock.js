@@ -29,12 +29,12 @@ export function createClient(db, startEmail) {
   const setSession = s => { session = s; authCbs.forEach(cb => cb(s ? 'SIGNED_IN' : 'SIGNED_OUT', s)) }
   const me = () => session?.user.id
   const prof = id => db.profiles.find(p => p.id === id)
-  const driverOk = (u, z) => { const p = prof(u); return !!p && p.role === 'driver' && p.is_verified && p.is_available && db.driver_zones.some(d => d.driver_id === u && d.zone_id === z) }
+  const driverOk = u => { const p = prof(u); return !!p && p.role === 'driver' && p.is_verified && p.is_available }
   const canSee = (t, r) => {
     const u = me(); if (!u) return false
     if (t === 'zones') return true
     if (t === 'driver_zones') return r.driver_id === u
-    if (t === 'orders') return r.customer_id === u || r.driver_id === u || (r.status === 'searching' && driverOk(u, r.pickup_zone_id))
+    if (t === 'orders') return r.customer_id === u || r.driver_id === u || (r.status === 'searching' && driverOk(u))
     if (t === 'offers') { const o = db.orders.find(x => x.id === r.order_id); return r.driver_id === u || o?.customer_id === u }
     if (t === 'profiles') return r.id === u || db.orders.some(o => (o.customer_id === u && (o.driver_id === r.id || db.offers.some(f => f.order_id === o.id && f.driver_id === r.id))) || (o.driver_id === u && o.customer_id === r.id))
     return false
@@ -67,10 +67,6 @@ export function createClient(db, startEmail) {
         if (this.lim) rows = rows.slice(0, this.lim)
         rows = rows.map(r => {
           const c = { ...r }
-          if (t === 'orders' && this.sel.includes('pickup:zones')) {
-            const pz = db.zones.find(z => z.id === r.pickup_zone_id), dz = db.zones.find(z => z.id === r.drop_zone_id)
-            c.pickup = { name: pz.name, center: pz.center }; c.drop = { name: dz.name, center: dz.center }
-          }
           return c
         })
         return this.out(rows)
@@ -107,14 +103,14 @@ export function createClient(db, startEmail) {
     take_order({ p_order }) {
       const o = db.orders.find(x => x.id === p_order), u = me()
       if (!o || o.status !== 'searching') return 'order_unavailable'
-      if (!driverOk(u, o.pickup_zone_id)) return 'not_allowed'
+      if (!driverOk(u)) return 'not_allowed'
       Object.assign(o, { status: 'accepted', driver_id: u, final_price: o.offered_price, updated_at: new Date().toISOString() })
       db.offers.filter(f => f.order_id === o.id && f.status === 'pending').forEach(f => { f.status = 'rejected' })
     },
     make_offer({ p_order, p_price }) {
       const o = db.orders.find(x => x.id === p_order), u = me()
       if (!o || o.status !== 'searching') return 'order_unavailable'
-      if (!driverOk(u, o.pickup_zone_id)) return 'not_allowed'
+      if (!driverOk(u)) return 'not_allowed'
       if (p_price < 5 || p_price > 1000) return 'bad_price'
       const ex = db.offers.find(f => f.order_id === o.id && f.driver_id === u)
       if (ex) Object.assign(ex, { price: p_price, status: 'pending', created_at: new Date().toISOString() })

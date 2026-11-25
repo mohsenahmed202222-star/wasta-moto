@@ -34,7 +34,7 @@ export function Login() {
 
   return (
     <form className="card" onSubmit={go}>
-      <h2>تسجيل الدخول</h2>
+      <div className="center" style={{display:"flex",flexDirection:"column",gap:4}}><h2>أهلاً بيك 👋</h2><p className="mut sm">سجّل دخولك وكمّل طلباتك</p></div>
 
       <label>
         الإيميل

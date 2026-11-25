@@ -35,10 +35,16 @@ create table public.driver_zones (
 create table public.orders (
   id uuid primary key default gen_random_uuid(),
   customer_id uuid not null references public.profiles(id),
-  pickup_zone_id int not null references public.zones(id),
+  pickup_zone_id int references public.zones(id),          -- اختياري (الموقع من الخريطة)
   pickup_address text not null,
-  drop_zone_id int not null references public.zones(id),
+  pickup_lat double precision,
+  pickup_lng double precision,
+  drop_zone_id int references public.zones(id),
   drop_address text not null,
+  drop_lat double precision,
+  drop_lng double precision,
+  distance_km numeric(7,2),
+  suggested_price numeric(8,2),
   note text,
   offered_price numeric(8,2) not null check (offered_price >= 5),
   final_price numeric(8,2),
@@ -93,14 +99,12 @@ end $$;
 create trigger protect_profile_trg before update on public.profiles
   for each row execute function public.protect_profile();
 
--- هل أنا مندوب موثّق ومتاح وبشتغل في المنطقة دي؟
-create or replace function public.driver_ok(p_zone int) returns boolean
+-- هل أنا مندوب موثّق ومتاح؟ (بيشوف كل طلبات بني سويف)
+create or replace function public.driver_ok(p_zone int default null) returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (
     select 1 from public.profiles p
-    join public.driver_zones dz on dz.driver_id = p.id
-    where p.id = auth.uid() and p.role = 'driver' and p.is_verified
-      and p.is_available and dz.zone_id = p_zone);
+    where p.id = auth.uid() and p.role = 'driver' and p.is_verified and p.is_available);
 $$;
 
 -- ---------- الأمان (RLS) ----------
