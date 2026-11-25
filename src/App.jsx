@@ -5,6 +5,7 @@ import { ToastProvider, SbCtx, useSb } from './ui.jsx'
 import { Login, Signup } from './Auth.jsx'
 import { CustomerHome, OrderPage } from './Customer.jsx'
 import { DriverHome } from './Driver.jsx'
+import { Icon } from './icons.jsx'
 
 const Ctx = createContext(null)
 export const useAuth = () => useContext(Ctx)
@@ -33,8 +34,8 @@ function Shell({ children }) {
   const { profile, session } = useAuth(); const nav = useNavigate()
   return (
     <>
-      <header className="top"><Link to="/" className="logo">🏍️ موتو دليفري</Link>
-        {session && <div className="who"><span>{profile?.full_name}</span><button className="link" onClick={async () => { await sb.auth.signOut(); nav('/login') }}>خروج</button></div>}
+      <header className="top"><Link to="/" className="logo"><span className="logo-mark"><Icon n="bike" size={20} /></span>موتو دليفري</Link>
+        {session && <div className="who"><span>{profile?.full_name}</span><button className="icon-btn" aria-label="خروج" onClick={async () => { await sb.auth.signOut(); nav('/login') }}><Icon n="logout" size={18} /></button></div>}
       </header>
       <main className="app">{children}</main>
     </>
